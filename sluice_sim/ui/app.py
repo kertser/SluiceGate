@@ -9,6 +9,7 @@ from __future__ import annotations
 import io
 import json
 import tempfile
+from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
@@ -30,6 +31,11 @@ from sluice_sim.sim.simulator import SimConfig, Simulator, _config_to_dict, _con
 # ──────────────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="Sluice Gate Simulator", layout="wide")
+
+_LOGO_PATH = Path(__file__).parent / "AtlantiumLogo.png"
+if _LOGO_PATH.exists():
+    st.image(str(_LOGO_PATH), width="stretch")
+
 st.title("🌊 Sluice Gate Level Control Simulator")
 
 # ──────────────────────────────────────────────────────────────────────
@@ -288,7 +294,7 @@ if "sim" not in st.session_state:
 # Buttons
 # ──────────────────────────────────────────────────────────────────────
 
-col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
+col_btn1, col_btn2, col_btn3 = st.columns(3)
 
 with col_btn1:
     run_btn = st.button(
@@ -305,11 +311,6 @@ with col_btn3:
         "🔄 Reset", width="stretch",
         help="Clear all results and reset the simulation.",
     )
-with col_btn4:
-    load_file = st.file_uploader(
-        "Load scenario", type=["json"], label_visibility="collapsed",
-        help="Upload a previously saved scenario JSON file to restore all parameters.",
-    )
 
 # ──────────────────────────────────────────────────────────────────────
 # Actions
@@ -319,13 +320,6 @@ if reset_btn:
     st.session_state.df = None
     st.session_state.sim = None
 
-if load_file is not None:
-    data = json.loads(load_file.read())
-    loaded_cfg = _config_from_dict(data)
-    sim = Simulator(loaded_cfg)
-    st.session_state.sim = sim
-    st.session_state.df = None
-    st.info("Scenario loaded! Press **Run** to simulate.")
 
 if run_btn:
     cfg = _build_config()
@@ -672,11 +666,45 @@ if df is not None and len(df) > 0:
             mime="application/json",
             help="Download the current parameter set as a JSON file. Can be loaded back later.",
         )
+
+    # Load a saved scenario
+    st.caption("Load a previously saved scenario:")
+    load_file = st.file_uploader(
+        "Load scenario JSON", type=["json"],
+        help="Upload a scenario JSON file to restore all parameters. Press Run after loading.",
+    )
+    if load_file is not None:
+        data = json.loads(load_file.read())
+        loaded_cfg = _config_from_dict(data)
+        sim = Simulator(loaded_cfg)
+        st.session_state.sim = sim
+        st.session_state.df = None
+        st.info("Scenario loaded! Press **▶ Run** to simulate.")
+
 else:
     st.info(
         "Configure parameters in the sidebar, then press "
         "**▶ Run** to start the simulation."
     )
+
+# ──────────────────────────────────────────────────────────────────────
+# Load scenario (also available when no simulation has run yet)
+# ──────────────────────────────────────────────────────────────────────
+
+if df is None or len(df) == 0:
+    st.divider()
+    st.caption("Or load a previously saved scenario:")
+    load_file_empty = st.file_uploader(
+        "Load scenario JSON", type=["json"], key="load_empty",
+        help="Upload a scenario JSON file to restore all parameters. Press Run after loading.",
+    )
+    if load_file_empty is not None:
+        data = json.loads(load_file_empty.read())
+        loaded_cfg = _config_from_dict(data)
+        sim = Simulator(loaded_cfg)
+        st.session_state.sim = sim
+        st.session_state.df = None
+        st.info("Scenario loaded! Press **▶ Run** to simulate.")
 
 
 
